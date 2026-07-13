@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedRemind — Medicine & Health Reminder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">&#9877;</span>
+      <span class="brand-name">MedRemind</span>
+    </div>
+    <div class="datetime">
+      <span class="date">{{ current_date }}</span>
+      <span class="time">{{ current_time }}</span>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- HERO: Next Dose -->
+  <section class="hero hero--{{ next_status }}" aria-label="Next dose">
+    {% if next_status == 'due' %}
+      <p class="hero-eyebrow">&#128309; DUE NOW</p>
+      <h1 class="hero-name">{{ next_dose.name }}</h1>
+      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; scheduled {{ next_dose.time }}</p>
+      {% if next_dose.note and next_dose.note != 'No special note' %}
+        <p class="hero-note">Note: {{ next_dose.note }}</p>
+      {% endif %}
+      <form method="POST" action="{{ url_for('mark_taken', med_id=next_dose.id) }}">
+        <button type="submit" class="btn btn-primary btn-large">&#10003; Mark as Taken</button>
+      </form>
+
+    {% elif next_status == 'upcoming' %}
+      <p class="hero-eyebrow">&#9201; NEXT UP</p>
+      <h1 class="hero-name">{{ next_dose.name }}</h1>
+      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; at {{ next_dose.time }}</p>
+      {% if next_dose.note and next_dose.note != 'No special note' %}
+        <p class="hero-note">Note: {{ next_dose.note }}</p>
+      {% endif %}
+      <p class="hero-hint">This will move here automatically when it's time.</p>
+
+    {% else %}
+      <p class="hero-eyebrow">&#127881; ALL DONE</p>
+      <h1 class="hero-name">Every medicine taken today</h1>
+      <p class="hero-meta">Great job staying on track. Come back tomorrow.</p>
+    {% endif %}
+  </section>
+
+  <!-- SUMMARY STRIP -->
+  <section class="summary" aria-label="Today's summary">
+    <div class="summary-item">
+      <span class="summary-num">{{ total }}</span>
+      <span class="summary-label">Total Medicines</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-num">{{ due|length }}</span>
+      <span class="summary-label">Due Now</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-num">{{ upcoming|length }}</span>
+      <span class="summary-label">Upcoming</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-num">{{ taken_count }}</span>
+      <span class="summary-label">Taken Today</span>
+    </div>
+    <form method="POST" action="{{ url_for('reset_daily') }}" class="summary-reset">
+      <button type="submit" class="btn btn-ghost">Reset Day</button>
+    </form>
+  </section>
+
+  <!-- MEDICINE LIST -->
+  <section class="list-section">
+    <div class="section-head">
+      <h2>Today's Medicines</h2>
+      <button class="btn btn-primary" onclick="document.getElementById('addDialog').showModal()">+ Add Medicine</button>
+    </div>
+
+    {% if medicines|length == 0 %}
+      <div class="empty-state">
+        <p>No medicines added yet.</p>
+        <p class="empty-sub">Tap "+ Add Medicine" to set up your first reminder.</p>
+      </div>
+    {% else %}
+      <div class="med-grid">
+        {% for m in medicines %}
+          <article class="med-card {% if m.taken %}is-taken{% elif m in due %}is-due{% endif %}">
+            <div class="med-card-top">
+              <h3>{{ m.name }}</h3>
+              {% if m.taken %}
+                <span class="badge badge-taken">Taken</span>
+              {% elif m in due %}
+                <span class="badge badge-due">Due</span>
+              {% else %}
+                <span class="badge badge-upcoming">Upcoming</span>
+              {% endif %}
+            </div>
+            <p class="med-dosage">{{ m.dosage }}</p>
+            <p class="med-time">&#128337; {{ m.time }}</p>
+            <p class="med-note">{{ m.note }}</p>
+            <div class="med-actions">
+              {% if m.taken %}
+                <form method="POST" action="{{ url_for('undo_taken', med_id=m.id) }}">
+                  <button type="submit" class="btn btn-ghost btn-small">Undo</button>
+                </form>
+              {% else %}
+                <form method="POST" action="{{ url_for('mark_taken', med_id=m.id) }}">
+                  <button type="submit" class="btn btn-primary btn-small">Mark Taken</button>
+                </form>
+              {% endif %}
+              <form method="POST" action="{{ url_for('delete_medicine', med_id=m.id) }}" onsubmit="return confirm('Remove {{ m.name }}?');">
+                <button type="submit" class="btn btn-danger btn-small">Delete</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- HEALTH TIP -->
+  <section class="tip-banner">
+    <span class="tip-icon" aria-hidden="true">&#127807;</span>
+    <div>
+      <p class="tip-label">Today's Health Tip</p>
+      <p class="tip-text">{{ tip }}</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ADD MEDICINE MODAL -->
+<dialog id="addDialog" class="add-dialog">
+  <form method="POST" action="{{ url_for('add_medicine') }}">
+    <h2>Add Medicine Reminder</h2>
+
+    <label for="name">Medicine Name</label>
+    <input type="text" id="name" name="name" required placeholder="e.g. Metformin">
+
+    <label for="dosage">Dosage</label>
+    <input type="text" id="dosage" name="dosage" required placeholder="e.g. 1 tablet">
+
+    <label for="time">Reminder Time</label>
+    <input type="time" id="time" name="time" required>
+
+    <label for="note">Special Note (optional)</label>
+    <input type="text" id="note" name="note" placeholder="e.g. Take after food">
+
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('addDialog').close()">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save Reminder</button>
+    </div>
+  </form>
+</dialog>
+
+<footer class="page-footer">
+  <p>MedRemind &middot; Built for elderly care &middot; Works fully offline</p>
+</footer>
+
+</body>
+</html>
