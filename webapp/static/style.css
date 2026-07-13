@@ -1,0 +1,257 @@
+/* ============================================================
+   MedRemind — Design tokens
+   Palette chosen for high contrast + calm, non-clinical warmth.
+   Type: Atkinson Hyperlegible — designed for low-vision readers,
+   a deliberate fit for an elderly-care product.
+   ============================================================ */
+
+:root {
+  --bg: #FBF7F0;
+  --surface: #FFFFFF;
+  --ink: #1E2A24;
+  --ink-soft: #4B5A52;
+
+  --brand: #2F5D50;
+  --brand-dark: #1F4238;
+  --brand-tint: #DCEAE3;
+
+  --due: #B5541F;
+  --due-tint: #F7E3D6;
+
+  --upcoming: #8A6A1E;
+  --upcoming-tint: #F3E9CE;
+
+  --taken: #3F7D5C;
+  --taken-tint: #E1EFE7;
+
+  --danger: #A23B3B;
+
+  --radius: 16px;
+  --radius-lg: 24px;
+  --shadow: 0 2px 10px rgba(30, 42, 36, 0.08);
+  --shadow-lg: 0 12px 32px rgba(30, 42, 36, 0.14);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  background: var(--brand);
+  color: white;
+  padding: 18px 24px;
+}
+.topbar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 28px; }
+.brand-name { font-size: 24px; font-weight: 700; letter-spacing: 0.2px; }
+.datetime { text-align: right; }
+.datetime .date { display: block; font-size: 15px; opacity: 0.85; }
+.datetime .time { display: block; font-size: 20px; font-weight: 700; }
+
+/* ---------- Page layout ---------- */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* ---------- Hero: Next Dose (signature element) ---------- */
+.hero {
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 20px;
+  border-left: 10px solid var(--brand);
+  background: var(--surface);
+}
+.hero--due { border-left-color: var(--due); background: linear-gradient(135deg, var(--due-tint), var(--surface) 60%); }
+.hero--upcoming { border-left-color: var(--upcoming); background: linear-gradient(135deg, var(--upcoming-tint), var(--surface) 60%); }
+.hero--done { border-left-color: var(--taken); background: linear-gradient(135deg, var(--taken-tint), var(--surface) 60%); }
+
+.hero-eyebrow {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.hero-name { margin: 0 0 6px; font-size: 40px; line-height: 1.15; }
+.hero-meta { margin: 0 0 4px; font-size: 20px; color: var(--ink-soft); }
+.hero-note { margin: 0 0 16px; font-size: 17px; font-style: italic; color: var(--ink-soft); }
+.hero-hint { margin: 10px 0 0; font-size: 15px; color: var(--ink-soft); }
+
+/* ---------- Summary strip ---------- */
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.summary-item { display: flex; flex-direction: column; }
+.summary-num { font-size: 28px; font-weight: 700; color: var(--brand-dark); }
+.summary-label { font-size: 14px; color: var(--ink-soft); }
+.summary-reset { margin-left: auto; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 22px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.06s ease, filter 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-large { font-size: 19px; padding: 16px 28px; }
+.btn-small { font-size: 14px; padding: 8px 14px; }
+
+.btn-primary { background: var(--brand); color: white; }
+.btn-primary:hover { filter: brightness(1.08); }
+
+.btn-ghost { background: transparent; color: var(--brand-dark); border-color: var(--brand-dark); }
+.btn-ghost:hover { background: var(--brand-tint); }
+
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover { background: #F6E4E4; }
+
+/* ---------- Medicine list ---------- */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.section-head h2 { margin: 0; font-size: 24px; }
+
+.med-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.med-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  border-top: 6px solid var(--brand-tint);
+}
+.med-card.is-due { border-top-color: var(--due); }
+.med-card.is-taken { border-top-color: var(--taken); opacity: 0.75; }
+
+.med-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.med-card-top h3 { margin: 0; font-size: 20px; }
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.badge-due { background: var(--due-tint); color: var(--due); }
+.badge-upcoming { background: var(--upcoming-tint); color: var(--upcoming); }
+.badge-taken { background: var(--taken-tint); color: var(--taken); }
+
+.med-dosage { margin: 10px 0 2px; font-size: 17px; }
+.med-time { margin: 0 0 2px; color: var(--ink-soft); }
+.med-note { margin: 0 0 16px; font-size: 14px; color: var(--ink-soft); font-style: italic; }
+
+.med-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+}
+.empty-sub { font-size: 15px; }
+
+/* ---------- Health tip banner ---------- */
+.tip-banner {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: var(--brand-tint);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-top: 32px;
+}
+.tip-icon { font-size: 32px; }
+.tip-label { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--brand-dark); }
+.tip-text { margin: 4px 0 0; font-size: 18px; }
+
+/* ---------- Add dialog ---------- */
+.add-dialog {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  box-shadow: var(--shadow-lg);
+  max-width: 420px;
+  width: 90%;
+}
+.add-dialog::backdrop { background: rgba(30, 42, 36, 0.45); }
+.add-dialog form { padding: 28px; display: flex; flex-direction: column; }
+.add-dialog h2 { margin: 0 0 18px; font-size: 22px; }
+.add-dialog label { font-weight: 700; font-size: 14px; margin-bottom: 6px; margin-top: 14px; }
+.add-dialog input {
+  font-family: inherit;
+  font-size: 17px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid #D9D2C4;
+  background: var(--bg);
+  color: var(--ink);
+}
+.add-dialog input:focus { outline: 3px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+/* ---------- Footer ---------- */
+.page-footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+/* ---------- Accessibility ---------- */
+:focus-visible { outline: 3px solid var(--brand-dark); outline-offset: 2px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 560px) {
+  .hero-name { font-size: 30px; }
+  .summary { gap: 18px; }
+  .summary-reset { margin-left: 0; width: 100%; }
+  .summary-reset .btn { width: 100%; }
+}
