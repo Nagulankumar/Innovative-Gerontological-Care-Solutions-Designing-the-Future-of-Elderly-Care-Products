@@ -1,10 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import check_password_hash
 import json
 import os
 import datetime
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = "change-this-to-something-secret"  # needed for sessions/login
 DATA_FILE = os.path.join(os.path.dirname(__file__), "medicines.json")
+USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
 
 HEALTH_TIPS = [
     "Drink at least 8 glasses of water daily.",
@@ -25,6 +29,22 @@ def load_medicines():
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     return []
+
+
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+
+def login_required(view_function):
+    @wraps(view_function)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return view_function(*args, **kwargs)
+    return wrapper
 
 
 def save_medicines(medicines):
@@ -49,7 +69,38 @@ def classify(medicines, current_time):
     return due, upcoming, taken
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        users = load_users()
+        matched_user = None
+        for u in users:
+            if u["username"] == username:
+                matched_user = u
+                break
+
+        if matched_user and check_password_hash(matched_user["password_hash"], password):
+            session["logged_in"] = True
+            session["username"] = username
+            return redirect(url_for("dashboard"))
+        else:
+            error = "Incorrect username or password. Please try again."
+
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def dashboard():
     medicines = load_medicines()
     now = datetime.datetime.now()
@@ -85,6 +136,7 @@ def dashboard():
 
 
 @app.route("/add", methods=["POST"])
+@login_required
 def add_medicine():
     medicines = load_medicines()
     name = request.form.get("name", "").strip()
@@ -107,6 +159,7 @@ def add_medicine():
 
 
 @app.route("/take/<int:med_id>", methods=["POST"])
+@login_required
 def mark_taken(med_id):
     medicines = load_medicines()
     for m in medicines:
@@ -117,6 +170,7 @@ def mark_taken(med_id):
 
 
 @app.route("/undo/<int:med_id>", methods=["POST"])
+@login_required
 def undo_taken(med_id):
     medicines = load_medicines()
     for m in medicines:
@@ -127,6 +181,7 @@ def undo_taken(med_id):
 
 
 @app.route("/delete/<int:med_id>", methods=["POST"])
+@login_required
 def delete_medicine(med_id):
     medicines = load_medicines()
     medicines = [m for m in medicines if m["id"] != med_id]
@@ -135,6 +190,7 @@ def delete_medicine(med_id):
 
 
 @app.route("/reset", methods=["POST"])
+@login_required
 def reset_daily():
     medicines = load_medicines()
     for m in medicines:
