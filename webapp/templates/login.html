@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — MedRemind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">&#9877;</span>
+      <span class="brand-name">MedRemind</span>
+    </div>
+  </div>
+</header>
+
+<main class="page login-page">
+  <section class="login-card">
+    <h1>Welcome Back</h1>
+    <p class="login-sub">Log in to view your medicine reminders.</p>
+
+    {% if error %}
+      <p class="login-error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autofocus>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+
+      <button type="submit" class="btn btn-primary btn-large login-btn">Log In</button>
+    </form>
+  </section>
+</main>
+
+</body>
+</html>
