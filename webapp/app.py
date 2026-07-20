@@ -11,6 +11,16 @@ app.secret_key = "change-this-to-something-secret"  # needed for sessions/login
 DATA_FILE = os.path.join(os.path.dirname(__file__), "medicines.json")
 USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
 
+# Render's server runs on UTC time, not Indian time — so we force
+# every "now" in this app to be Indian Standard Time (UTC+5:30),
+# regardless of what timezone the actual server is physically in.
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+
+def now_ist():
+    return datetime.datetime.now(IST)
+
+
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 HEALTH_TIPS = [
@@ -196,7 +206,7 @@ def logout():
 def dashboard():
     email = session["username"]
     medicines = get_user_medicines(email)
-    now = datetime.datetime.now()
+    now = now_ist()
     current_time = now.strftime("%H:%M")
     due, upcoming, taken = classify(medicines, current_time)
 
