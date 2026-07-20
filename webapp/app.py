@@ -34,8 +34,18 @@ HEALTH_TIPS = [
 def load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    return []
+            try:
+                data = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                return []
+    else:
+        return []
+
+    if not isinstance(data, list):
+        return []
+
+    # Ignore any old/broken entries that don't have the fields we expect
+    return [u for u in data if isinstance(u, dict) and "email" in u and "password_hash" in u]
 
 
 def save_users(users):
@@ -45,7 +55,7 @@ def save_users(users):
 
 def find_user(email):
     for u in load_users():
-        if u["email"].lower() == email.lower():
+        if u.get("email", "").lower() == email.lower():
             return u
     return None
 
@@ -63,7 +73,15 @@ def find_user(email):
 def load_all_medicines():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
-            return json.load(f)
+            try:
+                data = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                return {}
+        # Old version stored a plain list — if we find that, start fresh
+        # with the new per-user dictionary format instead of crashing.
+        if not isinstance(data, dict):
+            return {}
+        return data
     return {}
 
 
