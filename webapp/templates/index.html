@@ -121,6 +121,7 @@
                   <button type="submit" class="btn btn-primary btn-small">Mark Taken</button>
                 </form>
               {% endif %}
+              <button type="button" class="btn btn-ghost btn-small" onclick='openEditDialog({{ m|tojson }})'>Edit</button>
               <form method="POST" action="{{ url_for('delete_medicine', med_id=m.id) }}" onsubmit="return confirm('Remove {{ m.name }}?');">
                 <button type="submit" class="btn btn-danger btn-small">Delete</button>
               </form>
@@ -176,6 +177,59 @@
     </div>
   </form>
 </dialog>
+
+<!-- EDIT MEDICINE MODAL -->
+<dialog id="editDialog" class="add-dialog">
+  <form method="POST" id="editForm">
+    <h2>Edit Medicine Reminder</h2>
+
+    <label for="edit-name">Medicine Name</label>
+    <input type="text" id="edit-name" name="name" required>
+
+    <label for="edit-dosage">Dosage</label>
+    <input type="text" id="edit-dosage" name="dosage" required>
+
+    <label for="edit-time">Reminder Time</label>
+    <input type="time" id="edit-time" name="time" required>
+
+    <label>Days to Take This</label>
+    <div class="day-picker">
+      {% for day in all_days %}
+        <label class="day-chip">
+          <input type="checkbox" name="days" value="{{ day }}" class="edit-day-checkbox" data-day="{{ day }}">
+          <span>{{ day }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <p class="field-hint">Doctor changed something? Update the time, dosage, or days here anytime.</p>
+
+    <label for="edit-note">Special Note (optional)</label>
+    <input type="text" id="edit-note" name="note" placeholder="e.g. Take after food">
+
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('editDialog').close()">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function openEditDialog(med) {
+  document.getElementById('editForm').action = '/edit/' + med.id;
+  document.getElementById('edit-name').value = med.name;
+  document.getElementById('edit-dosage').value = med.dosage;
+  document.getElementById('edit-time').value = med.time;
+  document.getElementById('edit-note').value = (med.note === 'No special note') ? '' : med.note;
+
+  var dayBoxes = document.querySelectorAll('.edit-day-checkbox');
+  var medDays = med.days || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  dayBoxes.forEach(function (box) {
+    box.checked = medDays.indexOf(box.dataset.day) !== -1;
+  });
+
+  document.getElementById('editDialog').showModal();
+}
+</script>
 
 <footer class="page-footer">
   <p>MedRemind &middot; Built for elderly care &middot; Works fully offline</p>
