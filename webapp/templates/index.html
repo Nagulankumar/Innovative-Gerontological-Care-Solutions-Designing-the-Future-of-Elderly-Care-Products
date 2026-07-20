@@ -32,7 +32,7 @@
     {% if next_status == 'due' %}
       <p class="hero-eyebrow">&#128309; DUE NOW</p>
       <h1 class="hero-name">{{ next_dose.name }}</h1>
-      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; scheduled {{ next_dose.time }}</p>
+      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; scheduled {{ format_time_12hr(next_dose.time) }}</p>
       {% if next_dose.note and next_dose.note != 'No special note' %}
         <p class="hero-note">Note: {{ next_dose.note }}</p>
       {% endif %}
@@ -43,7 +43,7 @@
     {% elif next_status == 'upcoming' %}
       <p class="hero-eyebrow">&#9201; NEXT UP</p>
       <h1 class="hero-name">{{ next_dose.name }}</h1>
-      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; at {{ next_dose.time }}</p>
+      <p class="hero-meta">{{ next_dose.dosage }} &nbsp;&middot;&nbsp; at {{ format_time_12hr(next_dose.time) }}</p>
       {% if next_dose.note and next_dose.note != 'No special note' %}
         <p class="hero-note">Note: {{ next_dose.note }}</p>
       {% endif %}
@@ -94,10 +94,12 @@
     {% else %}
       <div class="med-grid">
         {% for m in medicines %}
-          <article class="med-card {% if m.taken %}is-taken{% elif m in due %}is-due{% endif %}">
+          <article class="med-card {% if m.taken %}is-taken{% elif m in due %}is-due{% elif m in other_days %}is-skipped{% endif %}">
             <div class="med-card-top">
               <h3>{{ m.name }}</h3>
-              {% if m.taken %}
+              {% if m in other_days %}
+                <span class="badge badge-skipped">Not Today</span>
+              {% elif m.taken %}
                 <span class="badge badge-taken">Taken</span>
               {% elif m in due %}
                 <span class="badge badge-due">Due</span>
@@ -106,7 +108,8 @@
               {% endif %}
             </div>
             <p class="med-dosage">{{ m.dosage }}</p>
-            <p class="med-time">&#128337; {{ m.time }}</p>
+            <p class="med-time">&#128337; {{ format_time_12hr(m.time) }}</p>
+            <p class="med-days">&#128197; {{ format_days(m.days) }}</p>
             <p class="med-note">{{ m.note }}</p>
             <div class="med-actions">
               {% if m.taken %}
@@ -152,6 +155,17 @@
 
     <label for="time">Reminder Time</label>
     <input type="time" id="time" name="time" required>
+
+    <label>Days to Take This</label>
+    <div class="day-picker">
+      {% for day in all_days %}
+        <label class="day-chip">
+          <input type="checkbox" name="days" value="{{ day }}" checked>
+          <span>{{ day }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <p class="field-hint">Uncheck days you don't need to take this on. Leave all checked for every day.</p>
 
     <label for="note">Special Note (optional)</label>
     <input type="text" id="note" name="note" placeholder="e.g. Take after food">
