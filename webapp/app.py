@@ -1,14 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 import json
 import os
 import datetime
+import re
 from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = "change-this-to-something-secret"  # needed for sessions/login
 DATA_FILE = os.path.join(os.path.dirname(__file__), "medicines.json")
 USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
+
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 HEALTH_TIPS = [
     "Drink at least 8 glasses of water daily.",
@@ -24,12 +27,9 @@ HEALTH_TIPS = [
 ]
 
 
-def load_medicines():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return []
-
+# ------------------------------------------------------------------
+# USER ACCOUNTS (each person gets their own login, like Gmail)
+# ------------------------------------------------------------------
 
 def load_users():
     if os.path.exists(USERS_FILE):
@@ -38,18 +38,49 @@ def load_users():
     return []
 
 
-def login_required(view_function):
-    @wraps(view_function)
-    def wrapper(*args, **kwargs):
-        if not session.get("logged_in"):
-            return redirect(url_for("login"))
-        return view_function(*args, **kwargs)
-    return wrapper
+def save_users(users):
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
 
-def save_medicines(medicines):
+def find_user(email):
+    for u in load_users():
+        if u["email"].lower() == email.lower():
+            return u
+    return None
+
+
+# ------------------------------------------------------------------
+# MEDICINES — now stored PER USER, not shared by everyone
+#
+# Structure of medicines.json:
+# {
+#   "someone@gmail.com": [ {medicine1}, {medicine2}, ... ],
+#   "another@gmail.com": [ {medicine1}, ... ]
+# }
+# ------------------------------------------------------------------
+
+def load_all_medicines():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_all_medicines(all_medicines):
     with open(DATA_FILE, "w") as f:
-        json.dump(medicines, f, indent=4)
+        json.dump(all_medicines, f, indent=4)
+
+
+def get_user_medicines(email):
+    all_medicines = load_all_medicines()
+    return all_medicines.get(email, [])
+
+
+def save_user_medicines(email, medicines):
+    all_medicines = load_all_medicines()
+    all_medicines[email] = medicines
+    save_all_medicines(all_medicines)
 
 
 def next_id(medicines):
@@ -69,26 +100,65 @@ def classify(medicines, current_time):
     return due, upcoming, taken
 
 
+def login_required(view_function):
+    @wraps(view_function)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return view_function(*args, **kwargs)
+    return wrapper
+
+
+# ------------------------------------------------------------------
+# SIGN UP — anyone can create their own account
+# ------------------------------------------------------------------
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    error = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+
+        if not EMAIL_PATTERN.match(email):
+            error = "Please enter a valid email address."
+        elif len(password) < 6:
+            error = "Password must be at least 6 characters long."
+        elif password != confirm:
+            error = "Passwords do not match."
+        elif find_user(email):
+            error = "An account with this email already exists."
+        else:
+            users = load_users()
+            users.append({
+                "email": email,
+                "password_hash": generate_password_hash(password),
+            })
+            save_users(users)
+            # log them in immediately after signup
+            session["logged_in"] = True
+            session["username"] = email
+            return redirect(url_for("dashboard"))
+
+    return render_template("signup.html", error=error)
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        email = request.form.get("username", "").strip().lower()
         password = request.form.get("password", "")
 
-        users = load_users()
-        matched_user = None
-        for u in users:
-            if u["username"] == username:
-                matched_user = u
-                break
+        matched_user = find_user(email)
 
         if matched_user and check_password_hash(matched_user["password_hash"], password):
             session["logged_in"] = True
-            session["username"] = username
+            session["username"] = email
             return redirect(url_for("dashboard"))
         else:
-            error = "Incorrect username or password. Please try again."
+            error = "Incorrect email or password. Please try again."
 
     return render_template("login.html", error=error)
 
@@ -99,10 +169,15 @@ def logout():
     return redirect(url_for("login"))
 
 
+# ------------------------------------------------------------------
+# DASHBOARD & MEDICINE ROUTES — all scoped to the logged-in user
+# ------------------------------------------------------------------
+
 @app.route("/")
 @login_required
 def dashboard():
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
     now = datetime.datetime.now()
     current_time = now.strftime("%H:%M")
     due, upcoming, taken = classify(medicines, current_time)
@@ -132,13 +207,16 @@ def dashboard():
         tip=tip,
         total=len(medicines),
         taken_count=len(taken),
+        user_email=email,
     )
 
 
 @app.route("/add", methods=["POST"])
 @login_required
 def add_medicine():
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
+
     name = request.form.get("name", "").strip()
     dosage = request.form.get("dosage", "").strip()
     time_str = request.form.get("time", "").strip()
@@ -153,7 +231,7 @@ def add_medicine():
             "note": note if note else "No special note",
             "taken": False,
         })
-        save_medicines(medicines)
+        save_user_medicines(email, medicines)
 
     return redirect(url_for("dashboard"))
 
@@ -161,41 +239,45 @@ def add_medicine():
 @app.route("/take/<int:med_id>", methods=["POST"])
 @login_required
 def mark_taken(med_id):
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
     for m in medicines:
         if m["id"] == med_id:
             m["taken"] = True
-    save_medicines(medicines)
+    save_user_medicines(email, medicines)
     return redirect(url_for("dashboard"))
 
 
 @app.route("/undo/<int:med_id>", methods=["POST"])
 @login_required
 def undo_taken(med_id):
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
     for m in medicines:
         if m["id"] == med_id:
             m["taken"] = False
-    save_medicines(medicines)
+    save_user_medicines(email, medicines)
     return redirect(url_for("dashboard"))
 
 
 @app.route("/delete/<int:med_id>", methods=["POST"])
 @login_required
 def delete_medicine(med_id):
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
     medicines = [m for m in medicines if m["id"] != med_id]
-    save_medicines(medicines)
+    save_user_medicines(email, medicines)
     return redirect(url_for("dashboard"))
 
 
 @app.route("/reset", methods=["POST"])
 @login_required
 def reset_daily():
-    medicines = load_medicines()
+    email = session["username"]
+    medicines = get_user_medicines(email)
     for m in medicines:
         m["taken"] = False
-    save_medicines(medicines)
+    save_user_medicines(email, medicines)
     return redirect(url_for("dashboard"))
 
 
