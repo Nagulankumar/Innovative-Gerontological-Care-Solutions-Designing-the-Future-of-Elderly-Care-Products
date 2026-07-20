@@ -304,3 +304,18 @@ body {
   text-decoration: underline;
 }
 .logout-link:hover { opacity: 1; }
+
+.login-switch {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.login-switch a { color: var(--brand); font-weight: 700; text-decoration: underline; }
+
+.user-email {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
