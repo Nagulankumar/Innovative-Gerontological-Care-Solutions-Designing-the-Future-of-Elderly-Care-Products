@@ -115,17 +115,39 @@ def next_id(medicines):
     return (max([m["id"] for m in medicines]) + 1) if medicines else 1
 
 
-def classify(medicines, current_time):
-    due, upcoming, taken = [], [], []
+ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def format_time_12hr(time_str):
+    """Convert '09:00' -> '9:00 AM' for display."""
+    try:
+        t = datetime.datetime.strptime(time_str, "%H:%M")
+        return t.strftime("%I:%M %p").lstrip("0")
+    except ValueError:
+        return time_str
+
+
+def format_days(days_list):
+    """Turn ['Mon','Tue',...] into a friendly label."""
+    if not days_list or set(days_list) == set(ALL_DAYS):
+        return "Every day"
+    return ", ".join(d for d in ALL_DAYS if d in days_list)
+
+
+def classify(medicines, current_time, today_short):
+    due, upcoming, taken, other_days = [], [], [], []
     for m in medicines:
-        if m["taken"]:
+        scheduled_days = m.get("days") or ALL_DAYS  # old medicines default to every day
+        if today_short not in scheduled_days:
+            other_days.append(m)
+        elif m["taken"]:
             taken.append(m)
         elif m["time"] <= current_time:
             due.append(m)
         else:
             upcoming.append(m)
     upcoming.sort(key=lambda m: m["time"])
-    return due, upcoming, taken
+    return due, upcoming, taken, other_days
 
 
 def login_required(view_function):
@@ -208,7 +230,8 @@ def dashboard():
     medicines = get_user_medicines(email)
     now = now_ist()
     current_time = now.strftime("%H:%M")
-    due, upcoming, taken = classify(medicines, current_time)
+    today_short = now.strftime("%a")  # e.g. "Mon"
+    due, upcoming, taken, other_days = classify(medicines, current_time, today_short)
 
     if due:
         next_dose = due[0]
@@ -228,6 +251,11 @@ def dashboard():
         due=due,
         upcoming=upcoming,
         taken=taken,
+        other_days=other_days,
+        today_short=today_short,
+        all_days=ALL_DAYS,
+        format_time_12hr=format_time_12hr,
+        format_days=format_days,
         next_dose=next_dose,
         next_status=next_status,
         current_date=now.strftime("%A, %d %B %Y"),
@@ -249,6 +277,7 @@ def add_medicine():
     dosage = request.form.get("dosage", "").strip()
     time_str = request.form.get("time", "").strip()
     note = request.form.get("note", "").strip()
+    days = request.form.getlist("days")  # e.g. ["Mon", "Wed", "Fri"]
 
     if name and dosage and time_str:
         medicines.append({
@@ -258,6 +287,7 @@ def add_medicine():
             "time": time_str,
             "note": note if note else "No special note",
             "taken": False,
+            "days": days if days else ALL_DAYS,  # nothing picked = every day
         })
         save_user_medicines(email, medicines)
 
