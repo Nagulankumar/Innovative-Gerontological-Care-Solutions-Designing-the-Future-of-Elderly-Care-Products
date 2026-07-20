@@ -294,6 +294,34 @@ def add_medicine():
     return redirect(url_for("dashboard"))
 
 
+@app.route("/edit/<int:med_id>", methods=["POST"])
+@login_required
+def edit_medicine(med_id):
+    email = session["username"]
+    medicines = get_user_medicines(email)
+
+    name = request.form.get("name", "").strip()
+    dosage = request.form.get("dosage", "").strip()
+    time_str = request.form.get("time", "").strip()
+    note = request.form.get("note", "").strip()
+    days = request.form.getlist("days")
+
+    if name and dosage and time_str:
+        for m in medicines:
+            if m["id"] == med_id:
+                m["name"] = name
+                m["dosage"] = dosage
+                m["time"] = time_str
+                m["note"] = note if note else "No special note"
+                m["days"] = days if days else ALL_DAYS
+                # Note: we deliberately do NOT touch m["taken"] here —
+                # editing details shouldn't undo today's "already taken" tick.
+                break
+        save_user_medicines(email, medicines)
+
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/take/<int:med_id>", methods=["POST"])
 @login_required
 def mark_taken(med_id):
